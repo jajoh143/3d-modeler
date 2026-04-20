@@ -12,7 +12,20 @@ See [`/root/.claude/plans/i-want-you-to-replicated-moth.md`](../../root/.claude/
 
 ## Status
 
-**M0 — Scaffold** (complete). Lit cube renders in an `ArcRotateCamera` viewport inside a Tauri window.
+- **M0 — Scaffold** (complete). Lit cube renders inside a Tauri window.
+- **M1 — Editor core** (complete). Scene graph panel, inspector, translate/rotate/scale gizmos, orbit↔fly camera toggle, selection highlight, command-bus undo/redo, project save/load (`.3dmproj` JSON).
+
+### M1 keyboard shortcuts
+
+| Key | Action |
+|---|---|
+| `Q` / `W` / `E` / `R` | Select / translate / rotate / scale tool (orbit camera only) |
+| `F` | Focus selected, or toggle orbit ↔ fly when nothing selected |
+| `Ctrl/Cmd + Z` | Undo |
+| `Ctrl/Cmd + Shift + Z` / `Ctrl/Cmd + Y` | Redo |
+| `Delete` / `Backspace` | Delete selected |
+| `Esc` | Clear selection |
+| Fly-mode movement: `W A S D` pan, `E` up, `Q` down, mouse to look |
 
 ## Prerequisites
 
