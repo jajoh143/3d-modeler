@@ -1,6 +1,6 @@
 import type { Mesh } from "@babylonjs/core";
 import type { EditorScene } from "../engine/Scene";
-import { readColor, readParams } from "../engine/factory";
+import { readColor, readMaterial, readParams, type MaterialState } from "../engine/factory";
 import type { PrimitiveKind } from "../../state/editorStore";
 
 export const PROJECT_FILE_VERSION = 1 as const;
@@ -13,6 +13,8 @@ export interface StoredNode {
   visible: boolean;
   params: Record<string, number>;
   color: [number, number, number];
+  /** PBR overrides (metallic/roughness/textures). Default material state omitted. */
+  material?: MaterialState;
   /** Present only for kinds that back a MorphTargetManager (e.g. humanoid). */
   morphs?: Record<string, number>;
   transform: {
@@ -39,6 +41,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     const mesh = editor.registry.getMesh(id) as Mesh | undefined;
     if (!mesh) continue;
     const morphs = mesh.metadata?.morphs as Record<string, number> | undefined;
+    const material = readMaterial(mesh);
     nodes.push({
       id: n.id,
       name: n.name,
@@ -47,6 +50,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
       visible: n.visible,
       params: readParams(mesh),
       color: readColor(mesh),
+      ...(isDefaultMaterial(material) ? {} : { material }),
       ...(morphs ? { morphs: { ...morphs } } : {}),
       transform: {
         position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -62,6 +66,17 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     nodes,
     rootOrder: [...s.rootOrder],
   };
+}
+
+function isDefaultMaterial(m: MaterialState): boolean {
+  return (
+    m.metallic === 0 &&
+    m.roughness === 0.7 &&
+    !m.textures.base &&
+    !m.textures.metallicRoughness &&
+    !m.textures.normal &&
+    !m.textures.occlusion
+  );
 }
 
 export function parseProjectJson(json: string): ProjectFileV1 {

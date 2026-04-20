@@ -1,7 +1,7 @@
 import type { Mesh } from "@babylonjs/core";
 import type { Command, CommandContext } from "./types";
 import { snapshotTransform, applyTransform, type TransformTuple } from "./types";
-import { createPrimitiveMesh, readColor, readKind } from "../engine/factory";
+import { createPrimitiveMesh, readColor, readKind, readMaterial } from "../engine/factory";
 
 /**
  * Rebuild a procedural mesh with new parameters, preserving transform + color.
@@ -53,6 +53,7 @@ function rebuild(
   const { editor, store } = ctx;
   const name = oldMesh.name;
   const color = readColor(oldMesh);
+  const material = readMaterial(oldMesh);
   editor.registry.unregister(id);
   oldMesh.dispose();
 
@@ -60,6 +61,7 @@ function rebuild(
     kind,
     params,
     color,
+    material,
   }) as Mesh;
   applyTransform(mesh, transform);
   editor.registry.register(id, mesh);

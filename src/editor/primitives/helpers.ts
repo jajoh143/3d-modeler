@@ -2,17 +2,22 @@ import {
   Color3,
   Mesh,
   MeshBuilder,
-  StandardMaterial,
+  PBRMetallicRoughnessMaterial,
   Vector3,
   Vector4,
   type Scene,
 } from "@babylonjs/core";
 import type { RGB } from "./types";
 
-export function makeMaterial(scene: Scene, name: string, color: RGB): StandardMaterial {
-  const mat = new StandardMaterial(`${name}_mat`, scene);
-  mat.diffuseColor = new Color3(color[0], color[1], color[2]);
-  mat.specularColor = new Color3(0.05, 0.05, 0.05);
+export function makeMaterial(
+  scene: Scene,
+  name: string,
+  color: RGB,
+): PBRMetallicRoughnessMaterial {
+  const mat = new PBRMetallicRoughnessMaterial(`${name}_mat`, scene);
+  mat.baseColor = new Color3(color[0], color[1], color[2]);
+  mat.metallic = 0;
+  mat.roughness = 0.7;
   return mat;
 }
 
@@ -23,7 +28,7 @@ export function makeMaterial(scene: Scene, name: string, color: RGB): StandardMa
 export function mergeCompound(
   _scene: Scene,
   name: string,
-  material: StandardMaterial,
+  material: PBRMetallicRoughnessMaterial,
   parts: Mesh[],
 ): Mesh {
   for (const p of parts) p.material = material;

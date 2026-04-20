@@ -20,6 +20,7 @@ export function loadProjectInto(editor: EditorScene, project: ProjectFileV1): vo
       position: stored.transform.position,
       rotation: stored.transform.rotation,
       scaling: stored.transform.scaling,
+      material: stored.material,
     }) as Mesh;
     if (stored.morphs) {
       applyMorphInfluences(mesh, stored.morphs);

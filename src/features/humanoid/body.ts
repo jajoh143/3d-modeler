@@ -3,7 +3,7 @@ import {
   MeshBuilder,
   MorphTarget,
   MorphTargetManager,
-  StandardMaterial,
+  PBRMetallicRoughnessMaterial,
   type Scene,
 } from "@babylonjs/core";
 import type { RGB } from "../../editor/primitives/types";
@@ -230,7 +230,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
  * Merge into a single mesh. Caller passes the shared material.
  * Topology is stable: same part order + same subdivisions = same vertex ordering.
  */
-function mergeParts(name: string, parts: Part[], mat: StandardMaterial): Mesh {
+function mergeParts(name: string, parts: Part[], mat: PBRMetallicRoughnessMaterial): Mesh {
   for (const p of parts) p.mesh.material = mat;
   const merged = Mesh.MergeMeshes(
     parts.map((p) => p.mesh),
@@ -252,9 +252,10 @@ export function buildHumanoid(
   name: string,
   color: RGB,
 ): { mesh: Mesh; morphs: MorphTargetManager } {
-  const mat = new StandardMaterial(`${name}_mat`, scene);
-  mat.diffuseColor.set(color[0], color[1], color[2]);
-  mat.specularColor.set(0.05, 0.05, 0.05);
+  const mat = new PBRMetallicRoughnessMaterial(`${name}_mat`, scene);
+  mat.baseColor.set(color[0], color[1], color[2]);
+  mat.metallic = 0;
+  mat.roughness = 0.7;
 
   const parts = buildParts(scene, neutralBodyParams());
   const mesh = mergeParts(name, parts, mat);
@@ -262,7 +263,7 @@ export function buildHumanoid(
   const mgr = new MorphTargetManager(scene);
   for (const def of MORPH_DEFS) {
     const variantParts = buildParts(scene, variantFor(def.key));
-    const variantMat = new StandardMaterial(`${name}_${def.key}_tmp`, scene);
+    const variantMat = new PBRMetallicRoughnessMaterial(`${name}_${def.key}_tmp`, scene);
     const variant = mergeParts(`${name}_${def.key}`, variantParts, variantMat);
     const positions = variant.getVerticesData("position");
     if (!positions) throw new Error("humanoid variant has no position data");

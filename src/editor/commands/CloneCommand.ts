@@ -1,7 +1,7 @@
 import type { Mesh } from "@babylonjs/core";
 import type { Command, CommandContext } from "./types";
 import { snapshotTransform } from "./types";
-import { createPrimitiveMesh, readColor, readKind, readParams } from "../engine/factory";
+import { createPrimitiveMesh, readColor, readKind, readMaterial, readParams } from "../engine/factory";
 
 /** Clone the given source node; the new node gets a fresh id and a small offset. */
 export class CloneCommand implements Command {
@@ -26,6 +26,7 @@ export class CloneCommand implements Command {
       kind,
       params: readParams(src),
       color: readColor(src),
+      material: readMaterial(src),
       position: [t[0][0] + this.offset[0], t[0][1] + this.offset[1], t[0][2] + this.offset[2]],
       rotation: t[1],
       scaling: t[2],
