@@ -1,17 +1,12 @@
 import { ActionIcon, Group, ScrollArea, Stack, Text, TextInput } from "@mantine/core";
-import { Box, Circle, Cylinder, Eye, EyeOff, Square, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useEditorStore, type PrimitiveKind } from "../state/editorStore";
+import { useEditorStore } from "../state/editorStore";
 import { getEditor } from "../editor/EditorHandle";
 import { DeleteNodeCommand } from "../editor/commands/DeleteNodeCommand";
 import { RenameNodeCommand } from "../editor/commands/RenameNodeCommand";
-
-const ICONS: Record<PrimitiveKind, typeof Box> = {
-  box: Box,
-  sphere: Circle,
-  cylinder: Cylinder,
-  ground: Square,
-};
+import { getPrimitive } from "../editor/primitives/registry";
+import { PrimitiveIcon } from "./PrimitiveIcon";
 
 export function SceneTreePanel() {
   const nodes = useEditorStore((s) => s.nodes);
@@ -68,7 +63,8 @@ export function SceneTreePanel() {
             </Text>
           )}
           {items.map((n) => {
-            const Icon = ICONS[n.kind];
+            const def = getPrimitive(n.kind);
+            const iconName = def?.icon ?? "box";
             const selected = selectedIds.includes(n.id);
             const editing = editingId === n.id;
             return (
@@ -100,7 +96,7 @@ export function SceneTreePanel() {
                   setDraftName(n.name);
                 }}
               >
-                <Icon size={14} />
+                <PrimitiveIcon name={iconName} size={14} />
                 {editing ? (
                   <TextInput
                     autoFocus

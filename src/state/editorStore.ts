@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import type { CameraMode, ToolMode } from "../editor/tools/types";
 
-export type PrimitiveKind = "box" | "sphere" | "cylinder" | "ground";
+/** Kept as a string alias so new primitive kinds don't require a union update. */
+export type PrimitiveKind = string;
 
 export interface SceneNode {
   id: string;
@@ -18,6 +19,12 @@ export interface EditorState {
   selectedIds: string[];
   activeTool: ToolMode;
   cameraMode: CameraMode;
+
+  /** Bumped on any command that rebuilds/mutates a mesh (params, color). */
+  revision: number;
+
+  snapEnabled: boolean;
+  snapSize: number;
 
   projectPath: string | null;
   projectName: string;
@@ -36,6 +43,10 @@ export interface EditorState {
   setActiveTool(tool: ToolMode): void;
   setCameraMode(mode: CameraMode): void;
 
+  bumpRevision(): void;
+  setSnapEnabled(v: boolean): void;
+  setSnapSize(v: number): void;
+
   setProject(path: string | null, name: string): void;
   setDirty(dirty: boolean): void;
   setUndoState(canUndo: boolean, canRedo: boolean): void;
@@ -48,6 +59,11 @@ export const useEditorStore = create<EditorState>((set) => ({
   selectedIds: [],
   activeTool: "translate",
   cameraMode: "orbit",
+
+  revision: 0,
+
+  snapEnabled: false,
+  snapSize: 0.25,
 
   projectPath: null,
   projectName: "Untitled",
@@ -90,11 +106,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     }),
 
   replaceAll: (nodes, rootOrder) =>
-    set(() => ({ nodes, rootOrder, selectedIds: [], dirty: false })),
+    set(() => ({ nodes, rootOrder, selectedIds: [], dirty: false, revision: 0 })),
 
   setSelected: (ids) => set(() => ({ selectedIds: ids })),
   setActiveTool: (tool) => set(() => ({ activeTool: tool })),
   setCameraMode: (mode) => set(() => ({ cameraMode: mode })),
+
+  bumpRevision: () => set((s) => ({ revision: s.revision + 1 })),
+  setSnapEnabled: (v) => set(() => ({ snapEnabled: v })),
+  setSnapSize: (v) => set(() => ({ snapSize: v })),
 
   setProject: (path, name) =>
     set(() => ({ projectPath: path, projectName: name, dirty: false })),

@@ -85,6 +85,16 @@ export class GizmoRig {
     this.setTool(this.currentTool);
   }
 
+  /** Apply snap increments to each gizmo. `translate` is in world units; `rotate` in radians. */
+  setSnap(translate: number, rotate: number): void {
+    const pos = this.mgr.gizmos.positionGizmo;
+    if (pos) pos.snapDistance = translate;
+    const rot = this.mgr.gizmos.rotationGizmo;
+    if (rot) rot.snapDistance = rotate;
+    const scl = this.mgr.gizmos.scaleGizmo;
+    if (scl) scl.snapDistance = translate;
+  }
+
   dispose(): void {
     this.mgr.dispose();
     this.utility.dispose();

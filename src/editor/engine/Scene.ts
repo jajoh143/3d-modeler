@@ -106,6 +106,12 @@ export class EditorScene {
     this.cameraRig.setMode(mode);
   }
 
+  setSnap(enabled: boolean, size: number): void {
+    const t = enabled ? size : 0;
+    const r = enabled ? Math.PI / 12 : 0; // 15°
+    this.gizmoRig.setSnap(t, r);
+  }
+
   syncSelection(selectedIds: string[]): void {
     const meshes = selectedIds
       .map((id) => this.registry.getMesh(id))

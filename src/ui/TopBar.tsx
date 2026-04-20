@@ -1,10 +1,18 @@
-import { ActionIcon, Button, Divider, Group, Menu, Text, Tooltip } from "@mantine/core";
 import {
-  Box,
+  ActionIcon,
+  Button,
+  Divider,
+  Group,
+  Menu,
+  NumberInput,
+  Switch,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import {
   Boxes,
-  Circle,
   Compass,
-  Cylinder,
+  FileDown,
   FileUp,
   FolderOpen,
   Move,
@@ -15,7 +23,6 @@ import {
   RotateCw,
   Save,
   Scaling,
-  Square,
 } from "lucide-react";
 import { useEditorStore, type PrimitiveKind } from "../state/editorStore";
 import { getEditor } from "../editor/EditorHandle";
@@ -23,6 +30,13 @@ import type { ToolMode } from "../editor/tools/types";
 import { CreatePrimitiveCommand } from "../editor/commands/CreatePrimitiveCommand";
 import { makeId } from "../editor/utils/ids";
 import { newProject, openProject, saveProject, saveProjectAs } from "../editor/io/projectIo";
+import { exportSceneGlb } from "../editor/io/GlbExport";
+import {
+  CATEGORY_LABEL,
+  primitivesByCategory,
+  requirePrimitive,
+} from "../editor/primitives/registry";
+import { PrimitiveIcon } from "./PrimitiveIcon";
 
 const TOOLS: Array<{ tool: ToolMode; icon: typeof Move; label: string; hint: string }> = [
   { tool: "select", icon: MousePointer2, label: "Select", hint: "Q" },
@@ -40,12 +54,17 @@ export function TopBar() {
   const canRedo = useEditorStore((s) => s.canRedo);
   const projectName = useEditorStore((s) => s.projectName);
   const dirty = useEditorStore((s) => s.dirty);
+  const snapEnabled = useEditorStore((s) => s.snapEnabled);
+  const snapSize = useEditorStore((s) => s.snapSize);
+  const setSnapEnabled = useEditorStore((s) => s.setSnapEnabled);
+  const setSnapSize = useEditorStore((s) => s.setSnapSize);
 
   const spawn = (kind: PrimitiveKind) => {
     const editor = getEditor();
     if (!editor) return;
+    const def = requirePrimitive(kind);
     const id = makeId(kind);
-    const name = uniqueName(kind);
+    const name = uniqueName(def.label);
     editor.bus.execute(
       new CreatePrimitiveCommand({
         id,
@@ -91,6 +110,17 @@ export function TopBar() {
     if (!editor) return;
     newProject(editor);
   };
+  const doExportGlb = async () => {
+    const editor = getEditor();
+    if (!editor) return;
+    try {
+      await exportSceneGlb(editor);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const grouped = primitivesByCategory();
 
   return (
     <Group justify="space-between" px="md" py={6} style={barStyle}>
@@ -101,17 +131,28 @@ export function TopBar() {
         </Text>
         <Divider orientation="vertical" />
 
-        <Menu shadow="md" width={160} position="bottom-start">
+        <Menu shadow="md" width={220} position="bottom-start" closeOnItemClick>
           <Menu.Target>
             <Button size="xs" variant="default" leftSection={<Plus size={14} />}>
               Add
             </Button>
           </Menu.Target>
           <Menu.Dropdown>
-            <Menu.Item leftSection={<Box size={14} />} onClick={() => spawn("box")}>Box</Menu.Item>
-            <Menu.Item leftSection={<Circle size={14} />} onClick={() => spawn("sphere")}>Sphere</Menu.Item>
-            <Menu.Item leftSection={<Cylinder size={14} />} onClick={() => spawn("cylinder")}>Cylinder</Menu.Item>
-            <Menu.Item leftSection={<Square size={14} />} onClick={() => spawn("ground")}>Ground</Menu.Item>
+            {grouped.map((g, idx) => (
+              <div key={g.category}>
+                {idx > 0 && <Menu.Divider />}
+                <Menu.Label>{CATEGORY_LABEL[g.category]}</Menu.Label>
+                {g.items.map((p) => (
+                  <Menu.Item
+                    key={p.id}
+                    leftSection={<PrimitiveIcon name={p.icon} size={14} />}
+                    onClick={() => spawn(p.id)}
+                  >
+                    {p.label}
+                  </Menu.Item>
+                ))}
+              </div>
+            ))}
           </Menu.Dropdown>
         </Menu>
 
@@ -151,6 +192,32 @@ export function TopBar() {
 
         <Divider orientation="vertical" />
 
+        <Tooltip label="Snap to grid" withArrow>
+          <Switch
+            size="xs"
+            checked={snapEnabled}
+            onChange={(e) => setSnapEnabled(e.currentTarget.checked)}
+            label="Snap"
+            styles={{ label: { fontSize: 11 } }}
+          />
+        </Tooltip>
+        <NumberInput
+          size="xs"
+          value={snapSize}
+          onChange={(v) => {
+            const n = typeof v === "number" ? v : parseFloat(String(v));
+            if (Number.isFinite(n) && n > 0) setSnapSize(n);
+          }}
+          min={0.05}
+          max={5}
+          step={0.05}
+          decimalScale={2}
+          disabled={!snapEnabled}
+          style={{ width: 72 }}
+        />
+
+        <Divider orientation="vertical" />
+
         <Tooltip label="Undo (Ctrl/Cmd+Z)" withArrow>
           <ActionIcon variant="subtle" onClick={doUndo} disabled={!canUndo} size="md">
             <RotateCcw size={15} />
@@ -169,7 +236,7 @@ export function TopBar() {
           {dirty ? " •" : ""}
         </Text>
         <Divider orientation="vertical" />
-        <Menu shadow="md" width={180} position="bottom-end">
+        <Menu shadow="md" width={200} position="bottom-end">
           <Menu.Target>
             <Button size="xs" variant="default">
               File
@@ -181,6 +248,10 @@ export function TopBar() {
             <Menu.Divider />
             <Menu.Item leftSection={<Save size={14} />} onClick={doSave}>Save</Menu.Item>
             <Menu.Item onClick={doSaveAs}>Save As…</Menu.Item>
+            <Menu.Divider />
+            <Menu.Item leftSection={<FileDown size={14} />} onClick={doExportGlb}>
+              Export GLB…
+            </Menu.Item>
           </Menu.Dropdown>
         </Menu>
       </Group>
@@ -194,16 +265,14 @@ const barStyle: React.CSSProperties = {
   userSelect: "none",
 };
 
-function uniqueName(kind: PrimitiveKind): string {
+function uniqueName(baseLabel: string): string {
   const existing = new Set(Object.values(useEditorStore.getState().nodes).map((n) => n.name));
+  const base = baseLabel.replace(/\s+/g, "");
   let i = 1;
-  while (existing.has(`${capitalize(kind)}.${pad(i)}`)) i += 1;
-  return `${capitalize(kind)}.${pad(i)}`;
+  while (existing.has(`${base}.${pad(i)}`)) i += 1;
+  return `${base}.${pad(i)}`;
 }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
 function pad(n: number): string {
   return n.toString().padStart(3, "0");
 }

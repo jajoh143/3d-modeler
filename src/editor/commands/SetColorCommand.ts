@@ -14,12 +14,16 @@ export class SetColorCommand implements Command {
   execute(ctx: CommandContext): void {
     const mesh = ctx.editor.registry.getMesh(this.id) as Mesh | undefined;
     if (mesh) writeColor(mesh, this.newColor);
-    ctx.store.getState().setDirty(true);
+    const s = ctx.store.getState();
+    s.setDirty(true);
+    s.bumpRevision();
   }
 
   undo(ctx: CommandContext): void {
     const mesh = ctx.editor.registry.getMesh(this.id) as Mesh | undefined;
     if (mesh) writeColor(mesh, this.oldColor);
-    ctx.store.getState().setDirty(true);
+    const s = ctx.store.getState();
+    s.setDirty(true);
+    s.bumpRevision();
   }
 }

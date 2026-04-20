@@ -1,4 +1,13 @@
-import { ColorInput, Group, NumberInput, ScrollArea, Stack, Text, TextInput } from "@mantine/core";
+import {
+  ColorInput,
+  Divider,
+  Group,
+  NumberInput,
+  ScrollArea,
+  Stack,
+  Text,
+  TextInput,
+} from "@mantine/core";
 import { useEffect, useMemo, useState } from "react";
 import type { Mesh } from "@babylonjs/core";
 import { useEditorStore } from "../state/editorStore";
@@ -6,8 +15,11 @@ import { getEditor } from "../editor/EditorHandle";
 import { RenameNodeCommand } from "../editor/commands/RenameNodeCommand";
 import { TransformNodeCommand } from "../editor/commands/TransformNodeCommand";
 import { SetColorCommand } from "../editor/commands/SetColorCommand";
-import { readColor } from "../editor/engine/factory";
+import { UpdateParamsCommand } from "../editor/commands/UpdateParamsCommand";
+import { readColor, readKind, readParams } from "../editor/engine/factory";
 import { snapshotTransform, type TransformTuple } from "../editor/commands/types";
+import { getPrimitive } from "../editor/primitives/registry";
+import type { ParamDef } from "../editor/primitives/types";
 
 const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
@@ -30,20 +42,28 @@ function parseHex(s: string): [number, number, number] | null {
 export function InspectorPanel() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const nodes = useEditorStore((s) => s.nodes);
+  const revision = useEditorStore((s) => s.revision);
   const node = selectedIds.length === 1 ? nodes[selectedIds[0]] : null;
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    // force refresh when selection changes; live transform is read from Babylon
     setTick((t) => t + 1);
-  }, [selectedIds]);
+  }, [selectedIds, revision]);
 
-  const { mesh, transform, color } = useMemo(() => {
+  const snapshot = useMemo(() => {
     const editor = getEditor();
-    if (!node || !editor) return { mesh: null, transform: null, color: null };
+    if (!node || !editor) return null;
     const m = editor.registry.getMesh(node.id) as Mesh | undefined;
-    if (!m) return { mesh: null, transform: null, color: null };
-    return { mesh: m, transform: snapshotTransform(m), color: readColor(m) };
+    if (!m) return null;
+    const kind = readKind(m) ?? node.kind;
+    const def = getPrimitive(kind);
+    return {
+      mesh: m,
+      transform: snapshotTransform(m),
+      color: readColor(m),
+      params: readParams(m),
+      def,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [node?.id, tick]);
 
@@ -57,6 +77,14 @@ export function InspectorPanel() {
       </Stack>
     );
   }
+
+  const { mesh, transform, color, params, def } = snapshot ?? {
+    mesh: null,
+    transform: null,
+    color: null,
+    params: null,
+    def: undefined,
+  };
 
   const commitName = (next: string) => {
     const editor = getEditor();
@@ -101,6 +129,14 @@ export function InspectorPanel() {
     setTick((t) => t + 1);
   };
 
+  const commitParam = (key: string, value: number) => {
+    const editor = getEditor();
+    if (!editor || !params) return;
+    if (params[key] === value) return;
+    const next = { ...params, [key]: value };
+    editor.bus.execute(new UpdateParamsCommand(node.id, next));
+  };
+
   const disabled = !mesh || !transform;
 
   return (
@@ -118,10 +154,29 @@ export function InspectorPanel() {
             />
           </Field>
           <Field label="Kind">
-            <Text size="xs" c="dimmed" tt="capitalize">
-              {node.kind}
+            <Text size="xs" c="dimmed">
+              {def?.label ?? node.kind}
             </Text>
           </Field>
+
+          {def && params && def.params.length > 0 && (
+            <>
+              <Divider label="Parameters" labelPosition="center" size="xs" />
+              <Stack gap={6}>
+                {def.params.map((p) => (
+                  <ParamRow
+                    key={p.key}
+                    param={p}
+                    value={params[p.key] ?? p.default}
+                    disabled={disabled}
+                    onCommit={(v) => commitParam(p.key, v)}
+                  />
+                ))}
+              </Stack>
+            </>
+          )}
+
+          <Divider label="Transform" labelPosition="center" size="xs" />
           <Vec3 label="Position" disabled={disabled} values={transform?.[0]} onCommit={(a, v) => setAxis(0, a, v)} step={0.1} />
           <Vec3
             label="Rotation (°)"
@@ -207,6 +262,45 @@ function Vec3({
       </Group>
     </Field>
   );
+}
+
+function ParamRow({
+  param,
+  value,
+  disabled,
+  onCommit,
+}: {
+  param: ParamDef;
+  value: number;
+  disabled: boolean;
+  onCommit: (v: number) => void;
+}) {
+  return (
+    <Group gap={6} wrap="nowrap" justify="space-between">
+      <Text size="xs" c="dimmed" style={{ flex: 1 }}>
+        {param.label}
+      </Text>
+      <NumberInput
+        key={`${param.key}-${value}`}
+        size="xs"
+        defaultValue={round(value)}
+        step={param.step}
+        min={param.min}
+        max={param.max}
+        decimalScale={3}
+        disabled={disabled}
+        style={{ width: 110 }}
+        onBlur={(e) => {
+          const n = Number(e.currentTarget.value);
+          if (Number.isFinite(n)) onCommit(clamp(n, param.min, param.max));
+        }}
+      />
+    </Group>
+  );
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, n));
 }
 
 function round(n: number): number {

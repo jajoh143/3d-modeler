@@ -16,10 +16,15 @@ export function Viewport() {
       if (state.selectedIds !== prev.selectedIds) editor.syncSelection(state.selectedIds);
       if (state.activeTool !== prev.activeTool) editor.setTool(state.activeTool);
       if (state.cameraMode !== prev.cameraMode) editor.setCameraMode(state.cameraMode);
+      if (state.snapEnabled !== prev.snapEnabled || state.snapSize !== prev.snapSize) {
+        editor.setSnap(state.snapEnabled, state.snapSize);
+      }
     });
 
-    // Apply initial tool state
-    editor.setTool(useEditorStore.getState().activeTool);
+    // Apply initial tool/snap state
+    const init = useEditorStore.getState();
+    editor.setTool(init.activeTool);
+    editor.setSnap(init.snapEnabled, init.snapSize);
 
     return () => {
       unsubscribe();

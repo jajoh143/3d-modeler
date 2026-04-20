@@ -4,9 +4,11 @@ import { snapshotTransform } from "./types";
 import {
   createPrimitiveMesh,
   readColor,
+  readKind,
+  readParams,
   type PrimitiveSpec,
 } from "../engine/factory";
-import type { PrimitiveKind, SceneNode } from "../../state/editorStore";
+import type { SceneNode } from "../../state/editorStore";
 
 interface Snapshot {
   node: SceneNode;
@@ -25,16 +27,13 @@ export class DeleteNodeCommand implements Command {
     const node = store.getState().nodes[this.id];
     const mesh = editor.registry.getMesh(this.id) as Mesh | undefined;
     if (!node || !mesh) return;
-    const md = mesh.metadata?.primitive as
-      | { kind: PrimitiveKind; params: Record<string, number>; color: [number, number, number] }
-      | undefined;
     this.snapshot = {
       node,
       transform: snapshotTransform(mesh),
       spec: {
-        kind: node.kind,
-        params: md?.params,
-        color: md?.color ?? readColor(mesh),
+        kind: readKind(mesh) ?? node.kind,
+        params: readParams(mesh),
+        color: readColor(mesh),
       },
     };
     editor.registry.unregister(this.id)?.dispose();
@@ -45,10 +44,12 @@ export class DeleteNodeCommand implements Command {
     if (!this.snapshot) return;
     const { editor, store } = ctx;
     const s = this.snapshot;
-    const mesh = createPrimitiveMesh(editor.scene, s.node.name, s.spec) as Mesh;
-    mesh.position.set(s.transform[0][0], s.transform[0][1], s.transform[0][2]);
-    mesh.rotation.set(s.transform[1][0], s.transform[1][1], s.transform[1][2]);
-    mesh.scaling.set(s.transform[2][0], s.transform[2][1], s.transform[2][2]);
+    const mesh = createPrimitiveMesh(editor.scene, s.node.name, {
+      ...s.spec,
+      position: s.transform[0],
+      rotation: s.transform[1],
+      scaling: s.transform[2],
+    }) as Mesh;
     editor.registry.register(s.node.id, mesh);
     store.getState().addNode(s.node);
   }

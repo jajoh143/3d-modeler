@@ -1,6 +1,6 @@
 import { Viewport } from "./ui/Viewport";
 import { TopBar } from "./ui/TopBar";
-import { SceneTreePanel } from "./ui/SceneTreePanel";
+import { LeftSidebar } from "./ui/LeftSidebar";
 import { InspectorPanel } from "./ui/InspectorPanel";
 import { KeyboardShortcuts } from "./ui/KeyboardShortcuts";
 
@@ -10,7 +10,7 @@ export default function App() {
       <TopBar />
       <div style={bodyStyle}>
         <aside style={leftPanelStyle}>
-          <SceneTreePanel />
+          <LeftSidebar />
         </aside>
         <main style={viewportStyle}>
           <Viewport />

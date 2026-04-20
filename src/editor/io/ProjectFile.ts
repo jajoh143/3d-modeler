@@ -1,6 +1,6 @@
 import type { Mesh } from "@babylonjs/core";
 import type { EditorScene } from "../engine/Scene";
-import { readColor } from "../engine/factory";
+import { readColor, readParams } from "../engine/factory";
 import type { PrimitiveKind } from "../../state/editorStore";
 
 export const PROJECT_FILE_VERSION = 1 as const;
@@ -36,17 +36,14 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     if (!n) continue;
     const mesh = editor.registry.getMesh(id) as Mesh | undefined;
     if (!mesh) continue;
-    const md = mesh.metadata?.primitive as
-      | { params?: Record<string, number>; color?: [number, number, number] }
-      | undefined;
     nodes.push({
       id: n.id,
       name: n.name,
       kind: n.kind,
       parentId: n.parentId,
       visible: n.visible,
-      params: md?.params ?? {},
-      color: md?.color ?? readColor(mesh),
+      params: readParams(mesh),
+      color: readColor(mesh),
       transform: {
         position: [mesh.position.x, mesh.position.y, mesh.position.z],
         rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
