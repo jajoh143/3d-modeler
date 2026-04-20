@@ -13,6 +13,8 @@ export interface StoredNode {
   visible: boolean;
   params: Record<string, number>;
   color: [number, number, number];
+  /** Present only for kinds that back a MorphTargetManager (e.g. humanoid). */
+  morphs?: Record<string, number>;
   transform: {
     position: [number, number, number];
     rotation: [number, number, number];
@@ -36,6 +38,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     if (!n) continue;
     const mesh = editor.registry.getMesh(id) as Mesh | undefined;
     if (!mesh) continue;
+    const morphs = mesh.metadata?.morphs as Record<string, number> | undefined;
     nodes.push({
       id: n.id,
       name: n.name,
@@ -44,6 +47,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
       visible: n.visible,
       params: readParams(mesh),
       color: readColor(mesh),
+      ...(morphs ? { morphs: { ...morphs } } : {}),
       transform: {
         position: [mesh.position.x, mesh.position.y, mesh.position.z],
         rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],

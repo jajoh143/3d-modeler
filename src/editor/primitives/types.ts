@@ -1,6 +1,6 @@
 import type { Mesh, Scene } from "@babylonjs/core";
 
-export type CategoryId = "basic" | "architecture" | "furniture" | "props";
+export type CategoryId = "basic" | "architecture" | "furniture" | "props" | "characters";
 
 export interface ParamDef {
   key: string;
@@ -26,7 +26,8 @@ export type IconName =
   | "bookshelf"
   | "stool"
   | "bottle"
-  | "bar";
+  | "bar"
+  | "person";
 
 export interface PrimitiveDef {
   id: string;

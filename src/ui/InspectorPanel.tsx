@@ -20,6 +20,7 @@ import { readColor, readKind, readParams } from "../editor/engine/factory";
 import { snapshotTransform, type TransformTuple } from "../editor/commands/types";
 import { getPrimitive } from "../editor/primitives/registry";
 import type { ParamDef } from "../editor/primitives/types";
+import { HumanoidMorphs } from "./HumanoidMorphs";
 
 const RAD_TO_DEG = 180 / Math.PI;
 const DEG_TO_RAD = Math.PI / 180;
@@ -199,6 +200,9 @@ export function InspectorPanel() {
               disabled={disabled}
             />
           </Field>
+          {node.kind === "humanoid" && mesh && mesh.morphTargetManager && (
+            <HumanoidMorphs mesh={mesh} nodeId={node.id} />
+          )}
         </Stack>
       </ScrollArea>
     </Stack>

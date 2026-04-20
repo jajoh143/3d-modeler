@@ -9,6 +9,7 @@ import {
   LayoutPanelLeft,
   Library,
   Martini,
+  PersonStanding,
   Shapes,
   Square,
   Table as TableIcon,
@@ -35,6 +36,7 @@ const MAP: Record<IconName, IconComp> = {
   stool: FlaskConical,
   bottle: Martini,
   bar: Shapes,
+  person: PersonStanding,
 };
 
 export function PrimitiveIcon({ name, size = 14 }: { name: IconName; size?: number }) {

@@ -4,12 +4,14 @@ import { BASIC_PRIMITIVES } from "./basic";
 import { ARCHITECTURE_PRIMITIVES } from "./architecture";
 import { FURNITURE_PRIMITIVES } from "./furniture";
 import { PROPS_PRIMITIVES } from "./props";
+import { CHARACTER_PRIMITIVES } from "../../features/humanoid";
 
 const ALL: PrimitiveDef[] = [
   ...BASIC_PRIMITIVES,
   ...ARCHITECTURE_PRIMITIVES,
   ...FURNITURE_PRIMITIVES,
   ...PROPS_PRIMITIVES,
+  ...CHARACTER_PRIMITIVES,
 ];
 
 const BY_ID = new Map<string, PrimitiveDef>(ALL.map((p) => [p.id, p]));
@@ -29,13 +31,20 @@ export function allPrimitives(): PrimitiveDef[] {
 }
 
 export const CATEGORY_LABEL: Record<CategoryId, string> = {
+  characters: "Characters",
   basic: "Basic",
   architecture: "Architecture",
   furniture: "Furniture",
   props: "Props",
 };
 
-export const CATEGORY_ORDER: CategoryId[] = ["basic", "architecture", "furniture", "props"];
+export const CATEGORY_ORDER: CategoryId[] = [
+  "characters",
+  "basic",
+  "architecture",
+  "furniture",
+  "props",
+];
 
 export function primitivesByCategory(): { category: CategoryId; items: PrimitiveDef[] }[] {
   return CATEGORY_ORDER.map((cat) => ({
