@@ -20,6 +20,7 @@ import { readColor, readKind, readParams } from "../editor/engine/factory";
 import { snapshotTransform, type TransformTuple } from "../editor/commands/types";
 import { getPrimitive } from "../editor/primitives/registry";
 import type { ParamDef } from "../editor/primitives/types";
+import { HumanoidAnimations } from "./HumanoidAnimations";
 import { HumanoidMorphs } from "./HumanoidMorphs";
 import { HumanoidPose } from "./HumanoidPose";
 import { MaterialEditor } from "./MaterialEditor";
@@ -208,6 +209,9 @@ export function InspectorPanel() {
           )}
           {node.kind === "humanoid" && mesh && mesh.skeleton && (
             <HumanoidPose mesh={mesh} nodeId={node.id} />
+          )}
+          {node.kind === "humanoid" && mesh && mesh.skeleton && (
+            <HumanoidAnimations mesh={mesh} nodeId={node.id} />
           )}
         </Stack>
       </ScrollArea>

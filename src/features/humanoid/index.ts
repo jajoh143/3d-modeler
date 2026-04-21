@@ -8,6 +8,7 @@ import {
   readBoneRotations,
   readMorphInfluences,
 } from "./body";
+import { ANIMATION_DEFS, importAnimationsFromFile, retargetAnimation } from "./animations";
 
 const SKIN_TONE: [number, number, number] = [0.82, 0.66, 0.55];
 
@@ -29,10 +30,14 @@ export const HUMANOID: PrimitiveDef = {
 export const CHARACTER_PRIMITIVES = [HUMANOID];
 
 export {
+  ANIMATION_DEFS,
   MORPH_DEFS,
   applyBoneRotations,
   applyMorphInfluences,
+  importAnimationsFromFile,
   readBoneRotations,
   readMorphInfluences,
+  retargetAnimation,
 };
 export type { MorphKey } from "./body";
+export type { AnimationDef } from "./animations";
