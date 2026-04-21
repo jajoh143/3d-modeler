@@ -21,6 +21,7 @@ import { snapshotTransform, type TransformTuple } from "../editor/commands/types
 import { getPrimitive } from "../editor/primitives/registry";
 import type { ParamDef } from "../editor/primitives/types";
 import { HumanoidMorphs } from "./HumanoidMorphs";
+import { HumanoidPose } from "./HumanoidPose";
 import { MaterialEditor } from "./MaterialEditor";
 
 const RAD_TO_DEG = 180 / Math.PI;
@@ -204,6 +205,9 @@ export function InspectorPanel() {
           {mesh && <MaterialEditor mesh={mesh} nodeId={node.id} />}
           {node.kind === "humanoid" && mesh && mesh.morphTargetManager && (
             <HumanoidMorphs mesh={mesh} nodeId={node.id} />
+          )}
+          {node.kind === "humanoid" && mesh && mesh.skeleton && (
+            <HumanoidPose mesh={mesh} nodeId={node.id} />
           )}
         </Stack>
       </ScrollArea>

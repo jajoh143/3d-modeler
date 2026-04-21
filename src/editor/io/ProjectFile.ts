@@ -17,6 +17,8 @@ export interface StoredNode {
   material?: MaterialState;
   /** Present only for kinds that back a MorphTargetManager (e.g. humanoid). */
   morphs?: Record<string, number>;
+  /** Per-bone local euler rotations in radians. Only non-rest bones stored. */
+  pose?: Record<string, [number, number, number]>;
   transform: {
     position: [number, number, number];
     rotation: [number, number, number];
@@ -41,6 +43,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     const mesh = editor.registry.getMesh(id) as Mesh | undefined;
     if (!mesh) continue;
     const morphs = mesh.metadata?.morphs as Record<string, number> | undefined;
+    const pose = mesh.metadata?.pose as Record<string, [number, number, number]> | undefined;
     const material = readMaterial(mesh);
     nodes.push({
       id: n.id,
@@ -52,6 +55,7 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
       color: readColor(mesh),
       ...(isDefaultMaterial(material) ? {} : { material }),
       ...(morphs ? { morphs: { ...morphs } } : {}),
+      ...(pose && Object.keys(pose).length > 0 ? { pose: clonePose(pose) } : {}),
       transform: {
         position: [mesh.position.x, mesh.position.y, mesh.position.z],
         rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
@@ -66,6 +70,14 @@ export function serializeProject(editor: EditorScene, name: string): ProjectFile
     nodes,
     rootOrder: [...s.rootOrder],
   };
+}
+
+function clonePose(
+  p: Record<string, [number, number, number]>,
+): Record<string, [number, number, number]> {
+  const out: Record<string, [number, number, number]> = {};
+  for (const [k, v] of Object.entries(p)) out[k] = [v[0], v[1], v[2]];
+  return out;
 }
 
 function isDefaultMaterial(m: MaterialState): boolean {

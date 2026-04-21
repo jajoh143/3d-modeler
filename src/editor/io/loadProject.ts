@@ -3,7 +3,7 @@ import type { EditorScene } from "../engine/Scene";
 import { createPrimitiveMesh } from "../engine/factory";
 import type { ProjectFileV1 } from "./ProjectFile";
 import type { SceneNode } from "../../state/editorStore";
-import { applyMorphInfluences } from "../../features/humanoid";
+import { applyBoneRotations, applyMorphInfluences } from "../../features/humanoid";
 
 /**
  * Replace the editor's current scene with the contents of a project file.
@@ -25,6 +25,10 @@ export function loadProjectInto(editor: EditorScene, project: ProjectFileV1): vo
     if (stored.morphs) {
       applyMorphInfluences(mesh, stored.morphs);
       mesh.metadata = { ...(mesh.metadata ?? {}), morphs: { ...stored.morphs } };
+    }
+    if (stored.pose) {
+      applyBoneRotations(mesh, stored.pose);
+      mesh.metadata = { ...(mesh.metadata ?? {}), pose: { ...stored.pose } };
     }
     editor.registry.register(stored.id, mesh);
     nodesById[stored.id] = {

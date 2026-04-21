@@ -4,9 +4,12 @@ import {
   MorphTarget,
   MorphTargetManager,
   PBRMetallicRoughnessMaterial,
+  Vector3,
+  VertexBuffer,
   type Scene,
 } from "@babylonjs/core";
 import type { RGB } from "../../editor/primitives/types";
+import { boneIndexMap, buildSkeleton, computeRigidSkinData } from "./skeleton";
 
 /**
  * Fixed topology: subdivision counts are constants, never a function of body params.
@@ -98,6 +101,7 @@ function variantFor(morph: MorphKey): BodyParams {
 
 interface Part {
   mesh: Mesh;
+  name: string;
 }
 
 function buildParts(scene: Scene, p: BodyParams): Part[] {
@@ -132,7 +136,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
     scene,
   );
   head.position.y = pelvisH + torsoH + neckH + headR;
-  parts.push({ mesh: head });
+  parts.push({ mesh: head, name: "head" });
 
   // Neck
   const neck = MeshBuilder.CreateCylinder(
@@ -141,7 +145,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
     scene,
   );
   neck.position.y = pelvisH + torsoH + neckH / 2;
-  parts.push({ mesh: neck });
+  parts.push({ mesh: neck, name: "neck" });
 
   // Torso — averaged chest/waist depth so both sliders influence silhouette.
   const torsoDepth = (chestD + waistD) / 2;
@@ -151,7 +155,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
     scene,
   );
   torso.position.y = pelvisH + torsoH / 2;
-  parts.push({ mesh: torso });
+  parts.push({ mesh: torso, name: "torso" });
 
   // Pelvis
   const pelvis = MeshBuilder.CreateBox(
@@ -160,7 +164,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
     scene,
   );
   pelvis.position.y = pelvisH / 2;
-  parts.push({ mesh: pelvis });
+  parts.push({ mesh: pelvis, name: "pelvis" });
 
   // Arms (upper then lower, L then R). Place so shoulder pivots at torso top corners.
   const shoulderY = pelvisH + torsoH - armUpperH / 2;
@@ -171,7 +175,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
       scene,
     );
     upper.position.set(side * (shoulderW / 2 + armR), shoulderY, 0);
-    parts.push({ mesh: upper });
+    parts.push({ mesh: upper, name: side < 0 ? "upperArmL" : "upperArmR" });
 
     const lower = MeshBuilder.CreateCylinder(
       side < 0 ? "foreArmL" : "foreArmR",
@@ -183,7 +187,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
       shoulderY - armUpperH / 2 - armLowerH / 2,
       0,
     );
-    parts.push({ mesh: lower });
+    parts.push({ mesh: lower, name: side < 0 ? "foreArmL" : "foreArmR" });
   }
 
   // Legs (upper then lower then foot, L then R).
@@ -196,7 +200,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
       scene,
     );
     thigh.position.set(side * hipW * 0.25, thighTop - legUpperH / 2, 0);
-    parts.push({ mesh: thigh });
+    parts.push({ mesh: thigh, name: side < 0 ? "thighL" : "thighR" });
 
     const shin = MeshBuilder.CreateCylinder(
       side < 0 ? "shinL" : "shinR",
@@ -208,7 +212,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
       thighTop - legUpperH - legLowerH / 2,
       0,
     );
-    parts.push({ mesh: shin });
+    parts.push({ mesh: shin, name: side < 0 ? "shinL" : "shinR" });
 
     const foot = MeshBuilder.CreateBox(
       side < 0 ? "footL" : "footR",
@@ -220,7 +224,7 @@ function buildParts(scene: Scene, p: BodyParams): Part[] {
       thighTop - legUpperH - legLowerH - footH / 2,
       footL * 0.2,
     );
-    parts.push({ mesh: foot });
+    parts.push({ mesh: foot, name: side < 0 ? "footL" : "footR" });
   }
 
   return parts;
@@ -246,7 +250,7 @@ function mergeParts(name: string, parts: Part[], mat: PBRMetallicRoughnessMateri
   return merged;
 }
 
-/** Build the neutral mesh plus a MorphTargetManager populated with each slider's target. */
+/** Build the neutral mesh + MorphTargetManager + Mixamo-named skeleton bound rigidly per part. */
 export function buildHumanoid(
   scene: Scene,
   name: string,
@@ -257,8 +261,17 @@ export function buildHumanoid(
   mat.metallic = 0;
   mat.roughness = 0.7;
 
-  const parts = buildParts(scene, neutralBodyParams());
+  const neutral = neutralBodyParams();
+  const parts = buildParts(scene, neutral);
+  const partCounts = parts.map((p) => ({ name: p.name, vertexCount: p.mesh.getTotalVertices() }));
   const mesh = mergeParts(name, parts, mat);
+
+  const skeleton = buildSkeleton(scene, name, neutral);
+  const { indices, weights } = computeRigidSkinData(partCounts, boneIndexMap(skeleton));
+  mesh.setVerticesData(VertexBuffer.MatricesIndicesKind, indices);
+  mesh.setVerticesData(VertexBuffer.MatricesWeightsKind, weights);
+  mesh.skeleton = skeleton;
+  mesh.numBoneInfluencers = 1;
 
   const mgr = new MorphTargetManager(scene);
   for (const def of MORPH_DEFS) {
@@ -276,6 +289,28 @@ export function buildHumanoid(
 
   mesh.morphTargetManager = mgr;
   return { mesh, morphs: mgr };
+}
+
+/** Apply a dictionary of bone-local euler rotations (radians) to an existing humanoid mesh. */
+export function applyBoneRotations(mesh: Mesh, rotations: Record<string, [number, number, number]>): void {
+  const skel = mesh.skeleton;
+  if (!skel) return;
+  for (const bone of skel.bones) {
+    const r = rotations[bone.name];
+    bone.setRotation(r ? new Vector3(r[0], r[1], r[2]) : new Vector3(0, 0, 0));
+  }
+}
+
+/** Read current bone-local euler rotations. Omits bones at rest. */
+export function readBoneRotations(mesh: Mesh): Record<string, [number, number, number]> {
+  const skel = mesh.skeleton;
+  if (!skel) return {};
+  const out: Record<string, [number, number, number]> = {};
+  for (const bone of skel.bones) {
+    const r = bone.getRotation();
+    if (r.x !== 0 || r.y !== 0 || r.z !== 0) out[bone.name] = [r.x, r.y, r.z];
+  }
+  return out;
 }
 
 /** Apply a dictionary of influences (0..1 each) to an existing humanoid mesh. */

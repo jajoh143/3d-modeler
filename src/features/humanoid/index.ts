@@ -1,9 +1,11 @@
 import type { PrimitiveDef } from "../../editor/primitives/types";
 import {
   MORPH_DEFS,
+  applyBoneRotations,
   applyMorphInfluences,
   buildHumanoid,
   neutralFootOffset,
+  readBoneRotations,
   readMorphInfluences,
 } from "./body";
 
@@ -26,5 +28,11 @@ export const HUMANOID: PrimitiveDef = {
 
 export const CHARACTER_PRIMITIVES = [HUMANOID];
 
-export { MORPH_DEFS, applyMorphInfluences, readMorphInfluences };
+export {
+  MORPH_DEFS,
+  applyBoneRotations,
+  applyMorphInfluences,
+  readBoneRotations,
+  readMorphInfluences,
+};
 export type { MorphKey } from "./body";
