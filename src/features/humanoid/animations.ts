@@ -233,6 +233,37 @@ export const ANIMATION_DEFS: AnimationDef[] = [
   { id: "walk", label: "Walk", build: buildWalk },
 ];
 
+export interface RecordedFrame {
+  frame: number;
+  pose: Record<string, [number, number, number]>;
+}
+
+/**
+ * Build an AnimationGroup from a sequence of captured pose snapshots.
+ * Each frame contributes a keyframe for every bone that appears in any frame —
+ * bones missing from a frame default to the identity (rest) rotation at that frame.
+ */
+export function buildRecordedGroup(
+  scene: Scene,
+  skeleton: Skeleton,
+  id: string,
+  frames: RecordedFrame[],
+  loop: boolean,
+): AnimationGroup | null {
+  if (frames.length < 2) return null;
+  const sorted = [...frames].sort((a, b) => a.frame - b.frame);
+  const boneNames = new Set<string>();
+  for (const f of sorted) for (const k of Object.keys(f.pose)) boneNames.add(k);
+  const tracks: BoneTrack[] = [];
+  for (const boneName of boneNames) {
+    tracks.push({
+      bone: boneName,
+      keys: sorted.map((f) => ({ frame: f.frame, euler: f.pose[boneName] ?? [0, 0, 0] })),
+    });
+  }
+  return makeGroup(scene, skeleton, id, tracks, loop);
+}
+
 /**
  * Retarget an imported AnimationGroup's bone tracks onto the given skeleton.
  * Matches by bone name. Bones not present in the destination are silently dropped.

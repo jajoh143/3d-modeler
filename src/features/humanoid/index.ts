@@ -8,7 +8,12 @@ import {
   readBoneRotations,
   readMorphInfluences,
 } from "./body";
-import { ANIMATION_DEFS, importAnimationsFromFile, retargetAnimation } from "./animations";
+import {
+  ANIMATION_DEFS,
+  buildRecordedGroup,
+  importAnimationsFromFile,
+  retargetAnimation,
+} from "./animations";
 
 const SKIN_TONE: [number, number, number] = [0.82, 0.66, 0.55];
 
@@ -34,10 +39,11 @@ export {
   MORPH_DEFS,
   applyBoneRotations,
   applyMorphInfluences,
+  buildRecordedGroup,
   importAnimationsFromFile,
   readBoneRotations,
   readMorphInfluences,
   retargetAnimation,
 };
 export type { MorphKey } from "./body";
-export type { AnimationDef } from "./animations";
+export type { AnimationDef, RecordedFrame } from "./animations";
